@@ -1,0 +1,21 @@
+# Dependencies
+.venv/
+uv.lock
+
+# Build artifacts
+__pycache__/
+*.py[oc]
+build/
+dist/
+*.egg-info/
+
+# Caches
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
