@@ -106,6 +106,8 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 - [ ] Add deps: `dartssh2`, `riverpod`, `freezed`, `json_serializable`, `drift`, `flutter_secure_storage`, `local_auth`
 - [ ] Port JSONL codec to Dart: `encode(msg)`, `decode(line)`, field-presence discrimination
 - [ ] `SshTransport` in Dart (dartssh2 channel exec)
+- [ ] **dartssh2 TOFU spike:** implement `onVerifyHostKey` callback, store fingerprint in `flutter_secure_storage`, prompt user on first connect — verify this works on iOS and Android before M1
+- [ ] **Ed25519 key generation spike:** `SSHKeyPair.generateEd25519()` in Dart, store private key in Keychain/Keystore, export public key as authorized_keys line — verify key auth works end-to-end
 - [ ] `Session` in Dart: request/future correlation, notification queue, approval queue
 - [ ] Smoke test: initialize handshake against a mocked or real server
 - [ ] CI: GitHub Actions for `flutter analyze` + `flutter test`
@@ -113,6 +115,7 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 ### Exit criteria
 - Flutter app builds for iOS simulator and Android emulator
 - `initialize` handshake succeeds in an automated test
+- TOFU host key verification and Ed25519 key auth both work (spikes passed)
 - Protocol types round-trip correctly
 
 ---
@@ -124,28 +127,37 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 ### Tasks
 
 **Host pairing:**
-- [ ] SSH host config UI: hostname, port, username, auth (password or key)
-- [ ] QR code flow: desktop helper (`wuyu-pair`) prints a QR code encoding `ssh://user@host:port` + public key fingerprint; app scans it, saves the host config
-- [ ] Host key TOFU: on first connect, show fingerprint, prompt "Trust this host?", persist
-- [ ] SSH key management: generate Ed25519 keypair on device, store in Keychain/Keystore; export public key for server's `authorized_keys`
+- [ ] Manual entry UI: hostname, port, username, auth method (password or device key)
+- [ ] QR pairing: app displays its own public key as a QR code; user runs `wuyu-pair` on desktop (a minimal shell script that reads the QR, adds the key to `~/.ssh/authorized_keys`, and prints the host's fingerprint as a second QR for the app to scan and trust). No npm, no server — just two QR scans and an `authorized_keys` append.
+  - QR format (app → desktop): `wuyu-pubkey:<base64-ed25519-public-key>`
+  - QR format (desktop → app): `wuyu-host:<user>@<host>:<port>?fp=<sha256-fingerprint>`
+- [ ] TOFU confirmation: on first connect show the fingerprint from the QR, prompt "Trust this host?", persist via `flutter_secure_storage`
+- [ ] Key management UI: view stored key, regenerate, copy public key to clipboard
+
+**Codex auth check:**
+- [ ] After connecting, call `account/read` — if unauthenticated, show a setup screen
+- [ ] Setup options: (a) paste `OPENAI_API_KEY` — app writes it to `~/.codex/config.toml` via SSH exec; (b) OAuth via `account/login/start` — poll for `account/login/completed` notification and open the returned URL in the phone's browser via `url_launcher`
+- [ ] Re-check auth state after setup; block agent launch until confirmed
 
 **Codex installation check:**
-- [ ] SSH exec `which codex` (or `codex --version`) to detect installation
-- [ ] If missing: show install instructions + one-tap "install now" (runs `npm install -g @openai/codex` with visible scrollable output)
+- [ ] SSH exec `command -v codex` to detect installation
+- [ ] If missing: show one-tap install — runs `npm install -g @openai/codex` with scrollable live output
 - [ ] Verify after install; store detected version in host config
 
 **Project bootstrap:**
-- [ ] SSH exec `ls -la ~/` to list the home dir; display as a project picker
-- [ ] "New project" flow: enter name → app runs `mkdir -p ~/projects/<name>` + optional `git init` (via SSH exec or `command/exec` after app-server starts)
+- [ ] SSH exec `ls -p ~ | grep /` to list home dir subdirectories; show as project picker
+- [ ] "New project" flow: enter name → `mkdir -p ~/projects/<name>` + optional `git init` via SSH exec (before app-server starts, so no second channel needed)
 - [ ] Store project configs locally (host + remote path)
 
 **Session launch:**
-- [ ] From project picker: tap a project → app SSH-execs `codex app-server`, completes handshake, opens chat screen automatically
+- [ ] Tap a project → SSH exec `codex app-server`, complete handshake, open chat automatically
+- [ ] If app-server fails to start: surface stderr output as an error screen (common cause: auth not set up)
 
 ### Exit criteria
-- User can go from "just added a host" to "chat screen open" in < 5 taps with no terminal
-- New project creation works (mkdir + git init) end-to-end
-- Codex install detection and guided install works
+- User can go from "first launch" to "chat screen open" in < 5 taps with no terminal
+- QR pairing round-trip works: phone key added to server, host fingerprint trusted
+- Codex auth check catches unauthenticated state and guides user through setup
+- New project creation (mkdir + git init) works end-to-end
 
 ---
 
