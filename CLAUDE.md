@@ -8,6 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Test Commands
 
+### Flutter app
+```bash
+cd wuyu_app
+flutter pub get        # Install dependencies
+flutter analyze        # Static analysis
+flutter test           # Run widget/unit tests
+```
+
 ### Dart protocol layer (production)
 ```bash
 cd wuyu_dart
@@ -42,6 +50,9 @@ The app is a **stateful, event-driven mobile client** that speaks Codex App Serv
 ### Package structure
 
 ```
+wuyu_app/lib/                      # Flutter app (M0 scaffold)
+│   └── main.dart                  # Entry point (placeholder)
+
 wuyu_dart/lib/src/                 # Dart production code
 ├── protocol/jsonrpc.dart          # JSON-RPC types (final classes, no subclassing)
 ├── codec.dart                     # JSONL encode/decode + CodecError

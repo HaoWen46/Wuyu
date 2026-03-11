@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Flutter / Dart
+wuyu_app/.dart_tool/
+wuyu_app/build/
+wuyu_app/*.iml
+wuyu_dart/.dart_tool/

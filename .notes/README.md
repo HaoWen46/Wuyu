@@ -10,6 +10,7 @@ Each file covers one topic or concern area. Files are named to be self-describin
 
 | File | Contents |
 |------|----------|
+| `dev-environment.md` | Dart/Flutter SDK locations, shell limitations, no-sudo constraints |
 | `protocol-quirks.md` | Edge cases and surprises in the Codex App Server wire protocol |
 | `ssh-transport.md` | Notes on SSH library choices, channel exec streaming, lifecycle management |
 | `testing-patterns.md` | Patterns for testing async transports, codec edge cases, integration stubs |
