@@ -8,12 +8,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Test Commands
 
+### Dart protocol layer (production)
 ```bash
-uv sync --all-extras    # Install all dependencies (including dev)
-uv run pytest tests/ -v # Run all tests
-uv run ruff check src/ tests/        # Lint
-uv run ruff format src/ tests/       # Format
-uv run pytest tests/test_codec.py -v # Run a single test file
+cd wuyu_dart
+dart test              # Run all Dart tests (38 tests)
+dart analyze           # Static analysis
+dart test test/codec_test.dart  # Run a single test file
+```
+
+### Python reference implementation
+```bash
+uv sync --all-extras           # Install all dependencies (including dev)
+uv run pytest tests/ -v        # Run all tests (81 tests)
+uv run ruff check src/ tests/  # Lint
+uv run ruff format src/ tests/ # Format
 ```
 
 ## Architecture
@@ -34,23 +42,32 @@ The app is a **stateful, event-driven mobile client** that speaks Codex App Serv
 ### Package structure
 
 ```
-src/wuyu/
-├── protocol/          # Codex App Server protocol types (v2)
-│   ├── _util.py       # Shared camelCase config for pydantic models
-│   ├── jsonrpc.py     # JSON-RPC message framing (Request, Notification, Response, Error)
-│   ├── types.py       # Core types (RequestId, ClientInfo, TurnStatus, approval decisions)
-│   ├── items.py       # ThreadItem variants (UserMessage, AgentMessage, CommandExecution, etc.)
-│   ├── events.py      # Server notification types (turn/item lifecycle, deltas)
-│   └── approvals.py   # Server-initiated approval request/response types
-├── codec.py           # JSONL codec — encode/decode JSON-RPC messages to/from wire format
-└── transport.py       # Abstract Transport interface (ABC) for SSH/stdio/WebSocket
+wuyu_dart/lib/src/                 # Dart production code
+├── protocol/jsonrpc.dart          # JSON-RPC types (final classes, no subclassing)
+├── codec.dart                     # JSONL encode/decode + CodecError
+├── transport.dart                 # abstract interface Transport
+└── session.dart                   # Session (Completer map, _AsyncQueue, handshake)
+
+src/wuyu/                          # Python reference implementation (81 tests)
+├── protocol/                      # Codex App Server protocol types (pydantic, camelCase)
+│   ├── _util.py                   # Shared CAMEL_CONFIG for pydantic models
+│   ├── jsonrpc.py                 # JSON-RPC message framing
+│   ├── types.py                   # Core types (RequestId, ClientInfo, TurnStatus, …)
+│   ├── items.py                   # ThreadItem variants (UserMessage, AgentMessage, …)
+│   ├── events.py                  # Server notification types
+│   └── approvals.py               # Approval request/response types
+├── codec.py                       # JSONL codec
+├── transport.py                   # Abstract Transport ABC
+├── ssh_transport.py               # SshTransport — asyncssh channel exec
+└── session.py                     # Session — request correlation & handshake
 ```
 
 ### Key design patterns
-- **camelCase ↔ snake_case**: All pydantic models use `CAMEL_CONFIG` from `_util.py` for automatic alias generation. Serialize with `by_alias=True` for wire format.
-- **Message discrimination**: No `"jsonrpc":"2.0"` field on the wire. The codec classifies messages by inspecting which fields are present (id+method→Request, method-only→Notification, etc.).
-- **Forward-compatible items**: Unknown `ThreadItem` types fall back to `UnknownItem` with raw dict preserved.
-- **Typed notification parsing**: `events.parse_notification_params()` and `approvals.parse_server_request_params()` dispatch on method string → typed pydantic model.
+- **Message discrimination**: No `"jsonrpc":"2.0"` field on the wire. Codec classifies by field presence (id+method→Request, method-only→Notification, etc.). Same logic in both Dart and Python.
+- **Dart types**: `final class` (not sealed) for message variants — type-checked in dispatcher via `is`. No subclassing.
+- **Dart session**: `Completer<Object?>` map for request correlation; `_AsyncQueue<T>` (Queue of items + Queue of waiters) for blocking notification consumption.
+- **Python types**: pydantic `BaseModel` with `CAMEL_CONFIG` for camelCase aliases. Serialize with `by_alias=True, exclude_none=True`.
+- **Forward-compatible items (Python)**: Unknown `ThreadItem` types fall back to `UnknownItem` with raw dict preserved.
 
 ### Key design constraints
 - Phone does NO compute — all agent work runs on the server

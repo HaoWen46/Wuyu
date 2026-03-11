@@ -19,9 +19,9 @@ Phone ──SSH──▶ Remote host
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| M0 | ✅ Done | Protocol types, JSONL codec, Transport interface |
-| M1 | ✅ Done | SSH transport, session layer, initialize handshake |
-| M2 | 🔲 Next | Thread lifecycle & basic chat |
+| M0 | 🔶 In progress | Flutter scaffold + Dart protocol layer (codec, transport, session) |
+| M1 | 🔲 Next | Host pairing + project bootstrap (SSH, TOFU, QR, Codex auth) |
+| M2 | 🔲 | Thread lifecycle & basic chat |
 | M3 | 🔲 | Approvals & permission UI |
 | M4 | 🔲 | Project & session management |
 | M5 | 🔲 | Reconnection & offline resilience |
@@ -29,39 +29,53 @@ Phone ──SSH──▶ Remote host
 | M7 | 🔲 | Job mode & notifications |
 | M8 | 🔲 | Hardening & release prep |
 
+**M0 progress:** Dart protocol layer complete (38 tests). Flutter scaffold (`flutter create`) pending Flutter SDK setup.
+
 ## Development
+
+### Dart protocol layer (`wuyu_dart/`)
+
+**Requirements:** [Dart SDK](https://dart.dev/get-dart) 3.11+
+
+```bash
+cd wuyu_dart
+
+# Run tests
+dart test
+
+# Analyze
+dart analyze
+```
+
+### Python reference implementation (`src/wuyu/`)
+
+The Python prototype validated the protocol design. It serves as a living specification and is not the production app.
 
 **Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/)
 
 ```bash
-# Install dependencies (including dev extras)
 uv sync --all-extras
-
-# Run tests
 uv run pytest tests/ -v
-
-# Lint & format
 uv run ruff check src/ tests/
 uv run ruff format src/ tests/
-
-# Install pre-commit hooks (runs ruff on commit, pytest on push)
-uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
 ## Architecture
 
 ```
-src/wuyu/
-├── protocol/          # Codex App Server protocol types (pydantic, camelCase)
-│   ├── jsonrpc.py     # JSON-RPC message framing
-│   ├── types.py       # Core types (ClientInfo, InitializeResponse, …)
-│   ├── items.py       # ThreadItem variants (UserMessage, AgentMessage, …)
-│   ├── events.py      # Server notification types
-│   └── approvals.py   # Approval request/response types
-├── codec.py           # JSONL encode/decode
-├── transport.py       # Abstract Transport interface
-├── ssh_transport.py   # SshTransport — asyncssh channel exec
-└── session.py         # Session — request correlation & handshake
+wuyu_dart/                     # Dart protocol layer (production)
+└── lib/src/
+    ├── protocol/jsonrpc.dart  # JSON-RPC message types
+    ├── codec.dart             # JSONL encode/decode, field-presence discrimination
+    ├── transport.dart         # Abstract Transport interface
+    └── session.dart           # Session — request correlation, queues, handshake
+
+src/wuyu/                      # Python reference implementation
+├── protocol/                  # Protocol types (pydantic, camelCase)
+├── codec.py                   # JSONL codec
+├── transport.py               # Abstract Transport
+├── ssh_transport.py           # asyncssh channel exec
+└── session.py                 # Session layer
 ```
 
 See [`PLAN.md`](PLAN.md) for the full milestone plan and [`PROJECT_SPEC.md`](PROJECT_SPEC.md) for the product specification.
