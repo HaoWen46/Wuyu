@@ -1,0 +1,13 @@
+name: wuyu_dart
+description: Wuyu protocol layer — JSONL codec, transport interface, and session for Codex App Server.
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.2
+
+dependencies:
+  # No runtime dependencies — pure Dart, dart:convert only
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
