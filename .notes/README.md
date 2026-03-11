@@ -10,9 +10,10 @@ Each file covers one topic or concern area. Files are named to be self-describin
 
 | File | Contents |
 |------|----------|
-| `dev-environment.md` | Dart/Flutter SDK locations, shell limitations, no-sudo constraints |
+| `dev-environment.md` | Dart/Flutter SDK locations, shell limitations, no-sudo constraints, pubspec.lock policy |
+| `dartssh2.md` | dartssh2 API gotchas: key types, stdin tear-off, host key handler, fake transport pattern |
 | `protocol-quirks.md` | Edge cases and surprises in the Codex App Server wire protocol |
-| `ssh-transport.md` | Notes on SSH library choices, channel exec streaming, lifecycle management |
+| `ssh-transport.md` | asyncssh (Python) API gotchas — channel exec, known_hosts, testing approach |
 | `testing-patterns.md` | Patterns for testing async transports, codec edge cases, integration stubs |
 
 Add a new file when a topic grows beyond a few bullet points, or when something took more than 30 minutes to figure out.

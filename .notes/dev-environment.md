@@ -39,6 +39,11 @@ Standard GNU coreutils are **not in PATH** in this shell environment:
 - Use Claude Code's built-in tools instead: Read, Glob, Grep
 - In Bash commands, avoid piping through these; run commands that produce complete output directly
 
+## pubspec.lock policy
+
+- `wuyu_dart/` is a **library** — `pubspec.lock` is gitignored (consumers pin their own versions)
+- `wuyu_app/` is an **application** — `pubspec.lock` is committed (ensures reproducible builds)
+
 ## No sudo
 
 Cannot install system packages via pacman/apt/etc. All tooling must be user-local.
