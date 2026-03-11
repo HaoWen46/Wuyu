@@ -5,6 +5,7 @@ description = "Mobile SSH control app for agentic coding CLIs"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncssh>=2.22.0",
     "pydantic>=2.10",
 ]
 
