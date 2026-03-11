@@ -6,7 +6,7 @@ environment:
   sdk: ^3.11.2
 
 dependencies:
-  # No runtime dependencies — pure Dart, dart:convert only
+  dartssh2: ^2.13.0
 
 dev_dependencies:
   lints: ^6.0.0

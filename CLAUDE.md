@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Dart protocol layer (production)
 ```bash
 cd wuyu_dart
-dart test              # Run all Dart tests (38 tests)
+dart test              # Run all Dart tests (50 tests)
 dart analyze           # Static analysis
 dart test test/codec_test.dart  # Run a single test file
 ```
@@ -46,6 +46,7 @@ wuyu_dart/lib/src/                 # Dart production code
 ├── protocol/jsonrpc.dart          # JSON-RPC types (final classes, no subclassing)
 ├── codec.dart                     # JSONL encode/decode + CodecError
 ├── transport.dart                 # abstract interface Transport
+├── ssh_transport.dart             # SshTransport — dartssh2 channel exec, fake() constructor for tests
 └── session.dart                   # Session (Completer map, _AsyncQueue, handshake)
 
 src/wuyu/                          # Python reference implementation (81 tests)
@@ -66,6 +67,7 @@ src/wuyu/                          # Python reference implementation (81 tests)
 - **Message discrimination**: No `"jsonrpc":"2.0"` field on the wire. Codec classifies by field presence (id+method→Request, method-only→Notification, etc.). Same logic in both Dart and Python.
 - **Dart types**: `final class` (not sealed) for message variants — type-checked in dispatcher via `is`. No subclassing.
 - **Dart session**: `Completer<Object?>` map for request correlation; `_AsyncQueue<T>` (Queue of items + Queue of waiters) for blocking notification consumption.
+- **SshTransport testability**: Internal constructor takes raw `Stream<List<int>>` + `void Function(Uint8List)` write callback + close callback. `SshTransport.fake()` injects in-memory fakes; `SshTransport.connect()` passes `session.stdout.cast<List<int>>()` and `session.stdin.add` (tear-off).
 - **Python types**: pydantic `BaseModel` with `CAMEL_CONFIG` for camelCase aliases. Serialize with `by_alias=True, exclude_none=True`.
 - **Forward-compatible items (Python)**: Unknown `ThreadItem` types fall back to `UnknownItem` with raw dict preserved.
 
