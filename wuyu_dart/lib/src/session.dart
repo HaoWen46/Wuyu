@@ -139,21 +139,28 @@ final class Session {
   }
 
   void _cancelPending(String reason) {
+    final error = StateError(reason);
     for (final c in _pending.values) {
-      if (!c.isCompleted) {
-        c.completeError(StateError(reason));
-      }
+      if (!c.isCompleted) c.completeError(error);
     }
     _pending.clear();
+    _notifQueue.drain(error);
+    _serverRequestQueue.drain(error);
   }
 }
 
 /// Async queue: add() immediately completes waiting get() calls, or buffers.
+///
+/// Once [drain] is called the queue is permanently closed: all current waiters
+/// and any future [get] calls immediately complete with the drain error.
 final class _AsyncQueue<T> {
   final _items = Queue<T>();
   final _waiters = Queue<Completer<T>>();
+  bool _closed = false;
+  Object? _closeError;
 
   void add(T item) {
+    if (_closed) return;
     if (_waiters.isNotEmpty) {
       _waiters.removeFirst().complete(item);
     } else {
@@ -162,9 +169,21 @@ final class _AsyncQueue<T> {
   }
 
   Future<T> get() {
+    // Drain buffered items before reporting closed — they arrived before EOF.
     if (_items.isNotEmpty) return Future.value(_items.removeFirst());
+    if (_closed) return Future.error(_closeError ?? StateError('closed'));
     final c = Completer<T>();
     _waiters.add(c);
     return c.future;
+  }
+
+  /// Permanently closes this queue, completing all current and future waiters
+  /// with [error]. Buffered items already in the queue are still deliverable.
+  void drain(Object error) {
+    _closed = true;
+    _closeError = error;
+    while (_waiters.isNotEmpty) {
+      _waiters.removeFirst().completeError(error);
+    }
   }
 }
