@@ -47,3 +47,12 @@ Standard GNU coreutils are **not in PATH** in this shell environment:
 ## No sudo
 
 Cannot install system packages via pacman/apt/etc. All tooling must be user-local.
+
+## Home directory storage limit
+
+`~` is on NFS with a ~2GB quota. Large caches must live in `/tmp2/b11902156/`:
+
+- `~/.pub-cache` → symlinked to `/tmp2/b11902156/.pub-cache` (670MB+)
+- Dart/Flutter tools follow the symlink transparently
+
+**Caveat**: `/tmp2/` is not persistent across reboots/node migrations. If lost, re-run `flutter pub get` to repopulate `.pub-cache` (Dart packages are always re-downloadable).
