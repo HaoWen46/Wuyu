@@ -13,7 +13,15 @@ final class CodexFound extends CodexStatus {
   /// Output of `codex --version` (e.g. `codex-cli 0.114.0`).
   final String version;
 
-  CodexFound({required this.path, required this.version});
+  /// Whether `codex app-server` is available (experimental subcommand,
+  /// absent in older versions).
+  final bool hasAppServer;
+
+  CodexFound({
+    required this.path,
+    required this.version,
+    required this.hasAppServer,
+  });
 }
 
 /// Codex was not found on the remote host's PATH.
@@ -27,9 +35,11 @@ class CodexDetector {
 
   CodexDetector(this._runner);
 
-  /// Runs `command -v codex` then `codex --version` over SSH.
+  /// Runs `command -v codex`, `codex --version`, and
+  /// `codex app-server --help` over SSH.
   ///
-  /// Returns [CodexFound] with path and version string, or [CodexNotFound].
+  /// Returns [CodexFound] with path, version, and [CodexFound.hasAppServer],
+  /// or [CodexNotFound] if codex is absent.
   Future<CodexStatus> detect() async {
     final (path, exitCode) = await _runner.run('command -v codex 2>/dev/null');
     if (exitCode != 0 || path.trim().isEmpty) {
@@ -37,9 +47,13 @@ class CodexDetector {
     }
 
     final (versionOut, _) = await _runner.run('codex --version 2>&1');
+    final (_, appServerExit) =
+        await _runner.run('codex app-server --help 2>/dev/null');
+
     return CodexFound(
       path: path.trim(),
       version: versionOut.trim(),
+      hasAppServer: appServerExit == 0,
     );
   }
 }

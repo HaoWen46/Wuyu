@@ -27,18 +27,29 @@ class _TrackingRunner implements RemoteRunner {
 
 void main() {
   group('CodexDetector', () {
-    test('codex found — returns CodexFound with path and version', () async {
+    test('codex found with app-server — returns CodexFound with all fields',
+        () async {
       final detector = CodexDetector(FakeRemoteRunner({
         'command -v codex 2>/dev/null': ('/home/user/.local/bin/codex\n', 0),
         'codex --version 2>&1': ('codex-cli 0.114.0\n', 0),
+        'codex app-server --help 2>/dev/null': ('...help text...\n', 0),
       }));
 
-      final status = await detector.detect();
-
-      expect(status, isA<CodexFound>());
-      final found = status as CodexFound;
+      final found = await detector.detect() as CodexFound;
       expect(found.path, '/home/user/.local/bin/codex');
       expect(found.version, 'codex-cli 0.114.0');
+      expect(found.hasAppServer, isTrue);
+    });
+
+    test('codex found but no app-server — hasAppServer is false', () async {
+      final detector = CodexDetector(FakeRemoteRunner({
+        'command -v codex 2>/dev/null': ('/usr/local/bin/codex\n', 0),
+        'codex --version 2>&1': ('codex-cli 0.50.0\n', 0),
+        'codex app-server --help 2>/dev/null': ('', 1),
+      }));
+
+      final found = await detector.detect() as CodexFound;
+      expect(found.hasAppServer, isFalse);
     });
 
     test('codex not in PATH — returns CodexNotFound', () async {
@@ -68,6 +79,7 @@ void main() {
 
       await detector.detect();
       expect(called, isNot(contains('codex --version 2>&1')));
+      expect(called, isNot(contains('codex app-server --help 2>/dev/null')));
     });
 
     test('version output is trimmed', () async {
