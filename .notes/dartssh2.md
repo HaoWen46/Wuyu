@@ -47,10 +47,32 @@ session.stdin.add   // ← tear-off works directly
 // Public-key auth
 List<SSHKeyPair> identities = [someKeyPair];
 
-// Generate Ed25519 key pair (for device keys):
-final keyPair = SSHKeyPair.generateEd25519();  // returns SSHKeyPair
-// Export public key as authorized_keys line:
-keyPair.toPublicKey().toAuthorizedKey();       // → "ssh-ed25519 AAAA... wuyu"
+// SSHKeyPair.fromPem returns a List (a PEM can hold multiple keys):
+final keyPair = SSHKeyPair.fromPem(pemString).first;
+
+// Generate Ed25519 key pair — dartssh2 has NO generateEd25519() method.
+// Must use pinenacl directly (it's a transitive dep of dartssh2).
+// Add pinenacl: ^0.6.0 explicitly to pubspec.yaml.
+import 'package:pinenacl/ed25519.dart' as nacl;
+
+final signingKey = nacl.SigningKey.generate();
+final keyPair = OpenSSHEd25519KeyPair(
+  signingKey.verifyKey.asTypedList,  // 32 bytes — public key
+  signingKey.asTypedList,             // 64 bytes — private key (seed + pub)
+  'wuyu',                             // comment
+);
+
+// Serialize to OpenSSH PEM (for storage):
+final pem = keyPair.toPem();  // "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
+
+// Export public key as authorized_keys line.
+// SSHHostKey is NOT in dartssh2's public exports — do NOT use SSHHostKey.getType().
+// Read the type from the SSH wire format directly (RFC 4251 §5: 4-byte length + UTF-8):
+import 'dart:convert';
+final encoded = keyPair.toPublicKey().encode();   // SSH wire format bytes
+final len = (encoded[0] << 24) | (encoded[1] << 16) | (encoded[2] << 8) | encoded[3];
+final type = utf8.decode(encoded.sublist(4, 4 + len));  // "ssh-ed25519"
+final line = '$type ${base64.encode(encoded)} wuyu';
 ```
 
 ## Lifecycle
