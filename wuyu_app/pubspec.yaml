@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  wuyu_dart:
+    path: ../wuyu_dart
   dartssh2: ^2.13.0
   pinenacl: ^0.6.0
   flutter_riverpod: ^2.6.1

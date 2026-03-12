@@ -86,6 +86,23 @@ class SshTransport implements Transport {
     );
   }
 
+  /// Create a [SshTransport] from an already-opened SSH exec [session].
+  ///
+  /// Use this when [SshConnectionService] manages authentication and host
+  /// key verification, and you want to launch a command on the open client.
+  /// The [client] is closed when this transport is closed.
+  static SshTransport fromSession(SSHSession session, SSHClient client) {
+    return SshTransport._(
+      stdout: session.stdout.cast<List<int>>(),
+      write: session.stdin.add,
+      onClose: () async {
+        session.close();
+        client.close();
+        await client.done.catchError((_) {});
+      },
+    );
+  }
+
   /// Create a transport backed by in-memory streams, for unit testing.
   ///
   /// [stdout] is the fake server-to-client byte stream.

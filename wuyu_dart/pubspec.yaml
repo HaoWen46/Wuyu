@@ -3,7 +3,7 @@ description: Wuyu protocol layer — JSONL codec, transport interface, and sessi
 version: 0.1.0
 
 environment:
-  sdk: ^3.11.2
+  sdk: ^3.8.0
 
 dependencies:
   dartssh2: ^2.13.0
