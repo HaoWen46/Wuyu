@@ -2,35 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wuyu_dart/wuyu_dart.dart';
 import 'package:wuyu_app/codex/events.dart';
 import 'package:wuyu_app/codex/thread_service.dart';
-
-// Minimal in-memory transport (same pattern as app_server_service_test.dart).
-final class FakeTransport implements Transport {
-  final List<Object?> _incoming;
-  final List<Object> sent = [];
-  int _idx = 0;
-  bool _connected = true;
-
-  FakeTransport({List<Object?>? incoming}) : _incoming = incoming ?? [];
-
-  @override
-  void send(Object message) => sent.add(message);
-
-  @override
-  Future<Object?> receive() async {
-    if (_idx >= _incoming.length) {
-      _connected = false;
-      return null;
-    }
-    await Future.microtask(() {});
-    return _incoming[_idx++];
-  }
-
-  @override
-  Future<void> close() async => _connected = false;
-
-  @override
-  bool get isConnected => _connected;
-}
+import '../helpers/fake_transport.dart';
 
 void main() {
   group('ThreadService.startThread', () {
