@@ -1,7 +1,7 @@
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:wuyu_app/codex/app_server_service.dart';
-import 'package:wuyu_app/codex/chat_screen.dart';
+import 'package:wuyu_app/codex/thread_list_screen.dart';
 import 'package:wuyu_app/codex/thread_service.dart';
 import 'package:wuyu_app/ssh/flutter_secure_kv.dart';
 import 'package:wuyu_app/ssh/host_key_store.dart';
@@ -9,7 +9,7 @@ import 'package:wuyu_app/ssh/ssh_connection_service.dart';
 import 'package:wuyu_app/ssh/ssh_key_service.dart';
 
 /// Development / smoke-test screen: fill in SSH details, tap Connect,
-/// and land in [ChatScreen] backed by a live Codex App Server session.
+/// and land in [ThreadListScreen] backed by a live Codex App Server session.
 ///
 /// This is not the production UX (see M4 for project management); it exists
 /// to validate the full stack end-to-end on a real device.
@@ -66,7 +66,7 @@ class _DevConnectScreenState extends State<DevConnectScreen> {
       }
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => ChatScreen(
+          builder: (_) => ThreadListScreen(
             service: svc,
             cwd: _cwdCtrl.text.trim(),
           ),

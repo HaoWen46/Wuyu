@@ -2,35 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wuyu_dart/wuyu_dart.dart';
 import 'package:wuyu_app/codex/events.dart';
 import 'package:wuyu_app/codex/thread_service.dart';
-
-// Minimal in-memory transport (same pattern as app_server_service_test.dart).
-final class FakeTransport implements Transport {
-  final List<Object?> _incoming;
-  final List<Object> sent = [];
-  int _idx = 0;
-  bool _connected = true;
-
-  FakeTransport({List<Object?>? incoming}) : _incoming = incoming ?? [];
-
-  @override
-  void send(Object message) => sent.add(message);
-
-  @override
-  Future<Object?> receive() async {
-    if (_idx >= _incoming.length) {
-      _connected = false;
-      return null;
-    }
-    await Future.microtask(() {});
-    return _incoming[_idx++];
-  }
-
-  @override
-  Future<void> close() async => _connected = false;
-
-  @override
-  bool get isConnected => _connected;
-}
+import '../helpers/fake_transport.dart';
 
 void main() {
   group('ThreadService.startThread', () {
@@ -105,6 +77,44 @@ void main() {
 
       expect(events, hasLength(1));
       expect(events.first, isA<ThreadStartedEvent>());
+    });
+  });
+
+  group('ThreadService.listThreads', () {
+    test('returns parsed ThreadSummary list sorted newest-first', () async {
+      final transport = FakeTransport(incoming: [
+        JsonRpcResponse(id: 1, result: {
+          'data': [
+            {'id': 'thr_1', 'created_at': 1742209200}, // 2026-03-17T10:00:00Z
+            {'id': 'thr_2', 'created_at': 1742212800}, // 2026-03-17T11:00:00Z
+          ],
+        }),
+      ]);
+      final session = Session(transport)..start();
+      final svc = ThreadService(session);
+
+      final threads = await svc.listThreads();
+
+      // Sorted newest-first: thr_2 (11:00) before thr_1 (10:00).
+      expect(threads, hasLength(2));
+      expect(threads[0].id, 'thr_2');
+      expect(threads[0].createdAt,
+          DateTime.fromMillisecondsSinceEpoch(1742212800 * 1000, isUtc: true));
+      expect(threads[1].id, 'thr_1');
+      final req = transport.sent.first as JsonRpcRequest;
+      expect(req.method, 'thread/list');
+    });
+
+    test('returns empty list when no threads exist', () async {
+      final transport = FakeTransport(incoming: [
+        JsonRpcResponse(id: 1, result: {'data': []}),
+      ]);
+      final session = Session(transport)..start();
+      final svc = ThreadService(session);
+
+      final threads = await svc.listThreads();
+
+      expect(threads, isEmpty);
     });
   });
 }

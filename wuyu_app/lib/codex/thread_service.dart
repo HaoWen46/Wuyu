@@ -1,6 +1,16 @@
 import 'package:wuyu_dart/wuyu_dart.dart';
 import 'package:wuyu_app/codex/events.dart';
 
+/// Lightweight summary of a thread returned by `thread/list`.
+final class ThreadSummary {
+  final String id;
+
+  /// Thread creation time (UTC). Source: `created_at` Unix epoch seconds.
+  final DateTime createdAt;
+
+  const ThreadSummary({required this.id, required this.createdAt});
+}
+
 /// Wraps [Session] with typed methods for the thread/turn lifecycle.
 class ThreadService {
   final Session _session;
@@ -61,5 +71,25 @@ class ThreadService {
     } on StateError {
       // Transport closed — stream ends naturally.
     }
+  }
+
+  /// Sends `thread/list` and returns summaries sorted newest-first.
+  Future<List<ThreadSummary>> listThreads() async {
+    final result = await _session.request('thread/list', params: {});
+    final map = result as Map<String, Object?>;
+    final raw = map['data'] as List<Object?>;
+    final summaries = raw.map((e) {
+      final t = e as Map<String, Object?>;
+      final epochSec = t['created_at'] as int;
+      return ThreadSummary(
+        id: t['id'] as String,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          epochSec * 1000,
+          isUtc: true,
+        ),
+      );
+    }).toList();
+    summaries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return summaries;
   }
 }
