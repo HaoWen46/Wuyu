@@ -15,6 +15,7 @@ Each file covers one topic or concern area. Files are named to be self-describin
 | `protocol-quirks.md` | Edge cases and surprises in the Codex App Server wire protocol |
 | `ssh-transport.md` | asyncssh (Python) API gotchas — channel exec, known_hosts, testing approach |
 | `testing-patterns.md` | Patterns for testing async transports, codec edge cases, integration stubs |
+| `slash-commands.md` | Codex CLI slash commands are TUI-only, not protocol features; use dedicated RPCs instead |
 
 Add a new file when a topic grows beyond a few bullet points, or when something took more than 30 minutes to figure out.
 
