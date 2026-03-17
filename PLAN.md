@@ -102,21 +102,21 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 **Goal:** Buildable Flutter app. Open SSH connection, exec `codex app-server`, complete `initialize` handshake, print `userAgent`. Nothing more.
 
 ### Tasks
-- [ ] `flutter create wuyu_app --org app.wuyu`
-- [ ] Add deps: `dartssh2`, `riverpod`, `freezed`, `json_serializable`, `drift`, `flutter_secure_storage`, `local_auth`
-- [ ] Port JSONL codec to Dart: `encode(msg)`, `decode(line)`, field-presence discrimination
-- [ ] `SshTransport` in Dart (dartssh2 channel exec)
-- [ ] **dartssh2 TOFU spike:** implement `onVerifyHostKey` callback, store fingerprint in `flutter_secure_storage`, prompt user on first connect — verify this works on iOS and Android before M1
-- [ ] **Ed25519 key generation spike:** `SSHKeyPair.generateEd25519()` in Dart, store private key in Keychain/Keystore, export public key as authorized_keys line — verify key auth works end-to-end
-- [ ] `Session` in Dart: request/future correlation, notification queue, approval queue
-- [ ] Smoke test: initialize handshake against a mocked or real server
+- [x] `flutter create wuyu_app --org app.wuyu`
+- [x] Add deps: `dartssh2`, `riverpod`, `freezed`, `json_serializable`, `drift`, `flutter_secure_storage`, `local_auth`
+- [x] Port JSONL codec to Dart: `encode(msg)`, `decode(line)`, field-presence discrimination
+- [x] `SshTransport` in Dart (dartssh2 channel exec)
+- [x] **dartssh2 TOFU spike:** `HostKeyStore` + `SshConnectionService.onVerifyHostKey` — implemented and unit-tested; real-device validation still pending
+- [x] **Ed25519 key generation spike:** `SshKeyService.getOrCreateKeyPair()` generates + stores in Keychain; `authorizedKeysLine` exported — unit-tested; real-device validation still pending
+- [x] `Session` in Dart: request/future correlation, notification queue, approval queue
+- [x] Smoke test: `AppServerService.handshake()` tested against mocked transport
 - [ ] CI: GitHub Actions for `flutter analyze` + `flutter test`
 
 ### Exit criteria
-- Flutter app builds for iOS simulator and Android emulator
-- `initialize` handshake succeeds in an automated test
-- TOFU host key verification and Ed25519 key auth both work (spikes passed)
-- Protocol types round-trip correctly
+- [x] Flutter app builds for iOS simulator and Android emulator
+- [x] `initialize` handshake succeeds in an automated test
+- [ ] TOFU host key verification and Ed25519 key auth both work on a real device (unit tests pass; hardware smoke test pending)
+- [x] Protocol types round-trip correctly
 
 ---
 
@@ -169,7 +169,7 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 - [x] `thread/start` with `cwd` = project directory
 - [x] `turn/start` with text input
 - [x] Handle streaming: `turn/started`, `turn/completed`, `item/started`, `item/completed`, `item/agentMessage/delta`
-- [x] Delta accumulation: `AgentMessageState` buffers deltas by item ID, exposes current text
+- [x] Delta accumulation: `AgentMessageAccumulator` buffers deltas by item ID, exposes current text
 - [x] Chat screen: input at bottom, scrolling message list (user right, agent left), streaming indicator, turn status
 - [x] Thread list: `thread/list`, show existing threads for a project, tap to resume (`thread/resume`)
 

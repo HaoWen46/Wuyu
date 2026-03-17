@@ -19,17 +19,21 @@ Phone ──SSH──▶ Remote host
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| M0 | 🔶 In progress | Flutter scaffold + Dart protocol layer (codec, transport, session) |
-| M1 | 🔲 Next | Host pairing + project bootstrap (SSH, TOFU, QR, Codex auth) |
-| M2 | 🔲 | Thread lifecycle & basic chat |
-| M3 | 🔲 | Approvals & permission UI |
-| M4 | 🔲 | Project & session management |
+| M0 | ✅ Done | Flutter scaffold + SSH stack + Dart protocol layer |
+| M1 | 🔶 Partial | Backend services done; full host pairing / auth / project bootstrap UI pending |
+| M2 | 🔶 Partial | Core chat + streaming done; thread list / resume UI pending |
+| M3 | 🔲 Next | Approvals & permission UI |
+| M4 | 🔲 | Project & session management (multi-host, multi-project) |
 | M5 | 🔲 | Reconnection & offline resilience |
 | M6 | 🔲 | Rich item rendering & polish |
 | M7 | 🔲 | Job mode & notifications |
 | M8 | 🔲 | Hardening & release prep |
 
-**M0 progress:** Dart protocol layer complete (38 tests). Flutter scaffold (`flutter create`) pending Flutter SDK setup.
+**What's built so far:**
+- Dart protocol layer: JSONL codec, Transport, SshTransport, Session — **50 tests**
+- Flutter SSH stack: Ed25519 key gen (`SshKeyService`), TOFU host key store (`HostKeyStore`), connection service (`SshConnectionService`), remote runner — **44 Flutter tests**
+- Codex backend: `CodexDetector`, `AppServerService` (handshake), `ThreadService` (start/turn/events), `AgentMessageAccumulator` (delta streaming)
+- Chat UI: `ChatScreen` (streaming bubbles, turn state, auto-scroll), `DevConnectScreen` (dev-only end-to-end wiring)
 
 ## Development
 
@@ -63,19 +67,37 @@ uv run ruff format src/ tests/
 ## Architecture
 
 ```
-wuyu_dart/                     # Dart protocol layer (production)
-└── lib/src/
-    ├── protocol/jsonrpc.dart  # JSON-RPC message types
-    ├── codec.dart             # JSONL encode/decode, field-presence discrimination
-    ├── transport.dart         # Abstract Transport interface
-    └── session.dart           # Session — request correlation, queues, handshake
+wuyu_app/lib/                       # Flutter app
+├── main.dart                       # Entry point → WuyuApp → DevConnectScreen
+├── dev_connect_screen.dart         # Dev-only: wires full SSH + protocol stack
+├── ssh/
+│   ├── secure_kv.dart              # SecureKv interface (key-value store)
+│   ├── flutter_secure_kv.dart      # FlutterSecureStorage adapter
+│   ├── ssh_key_service.dart        # Ed25519 key gen + Keychain persistence
+│   ├── host_key_store.dart         # TOFU host fingerprint store
+│   ├── ssh_connection_service.dart # SSHClient connect + TOFU verification
+│   └── remote_runner.dart          # SSH exec for one-shot commands
+└── codex/
+    ├── codex_detector.dart         # Detect codex binary + app-server capability
+    ├── app_server_service.dart     # openTransport() + handshake()
+    ├── events.dart                 # Typed AppServerEvent hierarchy
+    ├── thread_service.dart         # startThread / startTurn / events stream
+    ├── agent_message_accumulator.dart  # Delta accumulation by itemId
+    └── chat_screen.dart            # Streaming chat widget (M2)
 
-src/wuyu/                      # Python reference implementation
-├── protocol/                  # Protocol types (pydantic, camelCase)
-├── codec.py                   # JSONL codec
-├── transport.py               # Abstract Transport
-├── ssh_transport.py           # asyncssh channel exec
-└── session.py                 # Session layer
+wuyu_dart/lib/src/                  # Dart protocol layer
+├── protocol/jsonrpc.dart           # JSON-RPC message types
+├── codec.dart                      # JSONL encode/decode + field-presence discrimination
+├── transport.dart                  # Abstract Transport interface
+├── ssh_transport.dart              # SshTransport — dartssh2 + fake() for tests
+└── session.dart                    # Session — Completer map, _AsyncQueue, handshake
+
+src/wuyu/                           # Python reference implementation (81 tests)
+├── protocol/                       # Protocol types (pydantic, camelCase)
+├── codec.py                        # JSONL codec
+├── transport.py                    # Abstract Transport
+├── ssh_transport.py                # asyncssh channel exec
+└── session.py                      # Session layer
 ```
 
 See [`PLAN.md`](PLAN.md) for the full milestone plan and [`PROJECT_SPEC.md`](PROJECT_SPEC.md) for the product specification.

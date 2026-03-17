@@ -19,7 +19,7 @@ flutter test           # Run widget/unit tests
 ### Dart protocol layer (production)
 ```bash
 cd wuyu_dart
-dart test              # Run all Dart tests (50 tests)
+dart test              # Run all Dart tests (50 tests — codec, transport, SshTransport, session)
 dart analyze           # Static analysis
 dart test test/codec_test.dart  # Run a single test file
 ```
@@ -50,28 +50,43 @@ The app is a **stateful, event-driven mobile client** that speaks Codex App Serv
 ### Package structure
 
 ```
-wuyu_app/lib/                      # Flutter app (M0 scaffold)
-│   └── main.dart                  # Entry point (placeholder)
+wuyu_app/lib/                           # Flutter app
+├── main.dart                           # Entry point → WuyuApp → DevConnectScreen
+├── dev_connect_screen.dart             # Dev-only: full SSH+protocol stack wiring (not production UX)
+├── ssh/
+│   ├── secure_kv.dart                  # SecureKv interface
+│   ├── flutter_secure_kv.dart          # FlutterSecureStorage adapter (production)
+│   ├── ssh_key_service.dart            # Ed25519 key gen + Keychain persistence
+│   ├── host_key_store.dart             # TOFU host fingerprint store
+│   ├── ssh_connection_service.dart     # SSHClient connect + TOFU callback
+│   └── remote_runner.dart              # SSH exec for one-shot remote commands
+└── codex/
+    ├── codex_detector.dart             # Detect codex binary + app-server capability
+    ├── app_server_service.dart         # openTransport() + handshake() static methods
+    ├── events.dart                     # Typed AppServerEvent hierarchy (sealed class)
+    ├── thread_service.dart             # startThread / startTurn / events stream
+    ├── agent_message_accumulator.dart  # Delta accumulation by itemId (StringBuffer map)
+    └── chat_screen.dart                # Streaming chat widget (M2); uses ThreadService
 
-wuyu_dart/lib/src/                 # Dart production code
-├── protocol/jsonrpc.dart          # JSON-RPC types (final classes, no subclassing)
-├── codec.dart                     # JSONL encode/decode + CodecError
-├── transport.dart                 # abstract interface Transport
-├── ssh_transport.dart             # SshTransport — dartssh2 channel exec, fake() constructor for tests
-└── session.dart                   # Session (Completer map, _AsyncQueue, handshake)
+wuyu_dart/lib/src/                      # Dart production code (protocol layer)
+├── protocol/jsonrpc.dart               # JSON-RPC types (final classes, no subclassing)
+├── codec.dart                          # JSONL encode/decode + CodecError
+├── transport.dart                      # abstract interface Transport
+├── ssh_transport.dart                  # SshTransport — dartssh2 channel exec, fake() for tests
+└── session.dart                        # Session (Completer map, _AsyncQueue, handshake)
 
-src/wuyu/                          # Python reference implementation (81 tests)
-├── protocol/                      # Codex App Server protocol types (pydantic, camelCase)
-│   ├── _util.py                   # Shared CAMEL_CONFIG for pydantic models
-│   ├── jsonrpc.py                 # JSON-RPC message framing
-│   ├── types.py                   # Core types (RequestId, ClientInfo, TurnStatus, …)
-│   ├── items.py                   # ThreadItem variants (UserMessage, AgentMessage, …)
-│   ├── events.py                  # Server notification types
-│   └── approvals.py               # Approval request/response types
-├── codec.py                       # JSONL codec
-├── transport.py                   # Abstract Transport ABC
-├── ssh_transport.py               # SshTransport — asyncssh channel exec
-└── session.py                     # Session — request correlation & handshake
+src/wuyu/                               # Python reference implementation (81 tests)
+├── protocol/                           # Codex App Server protocol types (pydantic, camelCase)
+│   ├── _util.py                        # Shared CAMEL_CONFIG for pydantic models
+│   ├── jsonrpc.py                      # JSON-RPC message framing
+│   ├── types.py                        # Core types (RequestId, ClientInfo, TurnStatus, …)
+│   ├── items.py                        # ThreadItem variants (UserMessage, AgentMessage, …)
+│   ├── events.py                       # Server notification types
+│   └── approvals.py                    # Approval request/response types
+├── codec.py                            # JSONL codec
+├── transport.py                        # Abstract Transport ABC
+├── ssh_transport.py                    # SshTransport — asyncssh channel exec
+└── session.py                          # Session — request correlation & handshake
 ```
 
 ### Key design patterns
@@ -79,6 +94,9 @@ src/wuyu/                          # Python reference implementation (81 tests)
 - **Dart types**: `final class` (not sealed) for message variants — type-checked in dispatcher via `is`. No subclassing.
 - **Dart session**: `Completer<Object?>` map for request correlation; `_AsyncQueue<T>` (Queue of items + Queue of waiters) for blocking notification consumption.
 - **SshTransport testability**: Internal constructor takes raw `Stream<List<int>>` + `void Function(Uint8List)` write callback + close callback. `SshTransport.fake()` injects in-memory fakes; `SshTransport.connect()` passes `session.stdout.cast<List<int>>()` and `session.stdin.add` (tear-off).
+- **Flutter event subscription**: `ChatScreen` uses `StreamSubscription<AppServerEvent>` (not `StreamBuilder`) — required for imperative list accumulation, scroll-to-bottom, and `cancel()` in `dispose()`.
+- **`AgentMessageAccumulator`**: `Map<itemId, StringBuffer>` for delta accumulation. `textFor(itemId)` returns `''` before first delta (triggers `LinearProgressIndicator` in bubble). Never cleared between turns — itemIds are unique per session.
+- **`SecureKv` interface**: All secure storage goes through this thin interface (`read`/`write`/`delete`). `FlutterSecureKv` is the production adapter; tests inject `MemorySecureKv`. This pattern lets every service that touches secrets be unit-tested without platform plugins.
 - **Python types**: pydantic `BaseModel` with `CAMEL_CONFIG` for camelCase aliases. Serialize with `by_alias=True, exclude_none=True`.
 - **Forward-compatible items (Python)**: Unknown `ThreadItem` types fall back to `UnknownItem` with raw dict preserved.
 
