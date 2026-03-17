@@ -38,7 +38,18 @@ class ChatScreen extends StatefulWidget {
   /// The working directory passed to `thread/start` and `turn/start`.
   final String cwd;
 
-  const ChatScreen({super.key, required this.service, required this.cwd});
+  /// If non-null, resume this existing thread instead of starting a new one.
+  ///
+  /// Note: only new events are delivered after resume — prior message history
+  /// is not replayed. History hydration via `thread/read` is M5 work.
+  final String? threadId;
+
+  const ChatScreen({
+    super.key,
+    required this.service,
+    required this.cwd,
+    this.threadId,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -67,7 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (mounted) setState(() => _error = 'Connection closed.');
       },
     );
-    _startThread();
+    _initThread();
   }
 
   @override
@@ -78,10 +89,15 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  Future<void> _startThread() async {
+  Future<void> _initThread() async {
     try {
-      final id = await widget.service.startThread(cwd: widget.cwd);
-      if (mounted) setState(() => _threadId = id);
+      if (widget.threadId != null) {
+        await widget.service.resumeThread(widget.threadId!);
+        if (mounted) setState(() => _threadId = widget.threadId);
+      } else {
+        final id = await widget.service.startThread(cwd: widget.cwd);
+        if (mounted) setState(() => _threadId = id);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }
@@ -152,7 +168,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_threadId == null ? 'Connecting…' : 'Thread'),
+        title: Text(_threadId == null
+            ? 'Connecting…'
+            : widget.threadId != null
+                ? 'Resume · $_threadId'
+                : 'Thread · $_threadId'),
         backgroundColor: cs.inversePrimary,
         actions: [
           if (_turnRunning)
