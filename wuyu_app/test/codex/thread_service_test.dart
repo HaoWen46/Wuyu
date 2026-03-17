@@ -79,4 +79,42 @@ void main() {
       expect(events.first, isA<ThreadStartedEvent>());
     });
   });
+
+  group('ThreadService.listThreads', () {
+    test('returns parsed ThreadSummary list sorted newest-first', () async {
+      final transport = FakeTransport(incoming: [
+        JsonRpcResponse(id: 1, result: {
+          'data': [
+            {'id': 'thr_1', 'created_at': 1742209200}, // 2026-03-17T10:00:00Z
+            {'id': 'thr_2', 'created_at': 1742212800}, // 2026-03-17T11:00:00Z
+          ],
+        }),
+      ]);
+      final session = Session(transport)..start();
+      final svc = ThreadService(session);
+
+      final threads = await svc.listThreads();
+
+      // Sorted newest-first: thr_2 (11:00) before thr_1 (10:00).
+      expect(threads, hasLength(2));
+      expect(threads[0].id, 'thr_2');
+      expect(threads[0].createdAt,
+          DateTime.fromMillisecondsSinceEpoch(1742212800 * 1000, isUtc: true));
+      expect(threads[1].id, 'thr_1');
+      final req = transport.sent.first as JsonRpcRequest;
+      expect(req.method, 'thread/list');
+    });
+
+    test('returns empty list when no threads exist', () async {
+      final transport = FakeTransport(incoming: [
+        JsonRpcResponse(id: 1, result: {'data': []}),
+      ]);
+      final session = Session(transport)..start();
+      final svc = ThreadService(session);
+
+      final threads = await svc.listThreads();
+
+      expect(threads, isEmpty);
+    });
+  });
 }
