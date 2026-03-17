@@ -166,12 +166,12 @@ Serves as a living specification for the Dart/Flutter implementation. Not the pr
 **Goal:** User can start a thread, send a message, see a streaming agent response. The core loop.
 
 ### Tasks
-- [ ] `thread/start` with `cwd` = project directory
-- [ ] `turn/start` with text input
-- [ ] Handle streaming: `turn/started`, `turn/completed`, `item/started`, `item/completed`, `item/agentMessage/delta`
-- [ ] Delta accumulation: `AgentMessageState` buffers deltas by item ID, exposes current text
-- [ ] Chat screen: input at bottom, scrolling message list (user right, agent left), streaming indicator, turn status
-- [ ] Thread list: `thread/list`, show existing threads for a project, tap to resume (`thread/resume`)
+- [x] `thread/start` with `cwd` = project directory
+- [x] `turn/start` with text input
+- [x] Handle streaming: `turn/started`, `turn/completed`, `item/started`, `item/completed`, `item/agentMessage/delta`
+- [x] Delta accumulation: `AgentMessageState` buffers deltas by item ID, exposes current text
+- [x] Chat screen: input at bottom, scrolling message list (user right, agent left), streaming indicator, turn status
+- [x] Thread list: `thread/list`, show existing threads for a project, tap to resume (`thread/resume`)
 
 ### Exit criteria
 - Multi-turn conversation works end-to-end
